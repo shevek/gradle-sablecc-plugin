@@ -18,7 +18,7 @@ into build/generated-sources/sablecc:
 
 	buildscript {
 		dependencies {
-			compile 'org.anarres.gradle:gradle-sablecc-plugin:[1.0.0,)'
+			classpath 'org.anarres.gradle:gradle-sablecc-plugin:[1.0.0,)'
 		}
 	}
 
