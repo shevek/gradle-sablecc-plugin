@@ -7,7 +7,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,78 +25,106 @@ public class SableCCPostProcessor {
     public static final String DEPTH_FIRST_ADAPTER_NAME = "DepthFirstAdapter.java";
     public static final String ANALYSIS_ADAPTER_NAME = "AnalysisAdapter.java";
     public static final String NODE_NAME = "Node.java";
+    public static final String TOKEN_NAME = "Token.java";
+    public static final String EOF_NAME = "EOF.java";
 
-	private static List<String> readLines(File file) throws IOException {
-		FileReader fr = new FileReader(file);
-		try {
-			BufferedReader br = new BufferedReader(fr);
-			List<String> out = new ArrayList<String>();
-			for (;;) {
-				String line = br.readLine();
-				if (line == null)
-					break;
-				out.add(line);
-			}
-			return out;
-		} finally {
-			fr.close();
-		}
-	}
+    private static List<String> readLines(File file) throws IOException {
+        FileReader fr = new FileReader(file);
+        try {
+            BufferedReader br = new BufferedReader(fr);
+            List<String> out = new ArrayList<String>();
+            for (;;) {
+                String line = br.readLine();
+                if (line == null)
+                    break;
+                out.add(line);
+            }
+            return out;
+        } finally {
+            fr.close();
+        }
+    }
 
-	private static void writeLines(File file, List<? extends String> lines) throws IOException {
-		StringBuilder buf = new StringBuilder();
-		for (String line : lines)
-			buf.append(line).append("\n");
-		FileWriter fw = new FileWriter(file);
-		fw.write(buf.toString());
-		fw.close();
-	}
+    private static void writeLines(File file, List<? extends String> lines) throws IOException {
+        StringBuilder buf = new StringBuilder();
+        for (String line : lines)
+            buf.append(line).append("\n");
+        FileWriter fw = new FileWriter(file);
+        fw.write(buf.toString());
+        fw.close();
+    }
 
-	private static String getBaseName(String name) {
-		name = name.substring(name.lastIndexOf(File.separator) + 1);
-		int index = name.lastIndexOf('.');
-		if (index > 0)
-			name = name.substring(0, index);
-		return name;
-	}
+    private static String getBaseName(String name) {
+        name = name.substring(name.lastIndexOf(File.separator) + 1);
+        int index = name.lastIndexOf('.');
+        if (index > 0)
+            name = name.substring(0, index);
+        return name;
+    }
 
-	public static void processFile(File file) throws IOException {
-		if (LEXER_NAME.equals(file.getName())) {
-			processLexer(file);
-		} else if (PARSER_NAME.equals(file.getName())) {
-			processParser(file);
-		} else if (DEPTH_FIRST_ADAPTER_NAME.equals(file.getName())) {
-			processClone(file);
-		} else if (NODE_NAME.equals(file.getName())) {
-			processNode(file);
-		} else if (ANALYSIS_ADAPTER_NAME.equals(file.getName())) {
-			processAnalysisAdapter(file);
-		}
-	}
+    public static void processFile(File file) throws IOException {
+        if (LEXER_NAME.equals(file.getName())) {
+            processLexer(file);
+        } else if (PARSER_NAME.equals(file.getName())) {
+            processParser(file);
+        } else if (DEPTH_FIRST_ADAPTER_NAME.equals(file.getName())) {
+            processClone(file);
+        } else if (NODE_NAME.equals(file.getName())) {
+            processNode(file);
+        } else if (TOKEN_NAME.equals(file.getName())) {
+            processToken(file);
+        } else if (ANALYSIS_ADAPTER_NAME.equals(file.getName())) {
+            processAnalysisAdapter(file);
+        } else if (EOF_NAME.equals(file.getName())) {
+            processTToken(file, "EOF");
+        } else if (file.getName().startsWith("T")) {
+            processTToken(file, "T");
+        }
+    }
 
     private static void processLexer(File file) throws IOException {
         @SuppressWarnings({"rawtypes", "unchecked"})
         List<String> lines = readLines(file);
-        List<String> out = new ArrayList<String>();
+        List<String> lines_iface = new ArrayList<String>();
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i);
             if (line.startsWith("package ")) {
-                out.add(line);
+                lines_iface.add(line);
             } else if (line.startsWith("import ")) {
-                out.add(line);
+                lines_iface.add(line);
             } else if (line.startsWith("public class Lexer")) {
                 lines.set(i, "public class Lexer implements LexerInterface");
+            } else if (line.contains("private int line")) {
+                lines.add(i++, "    private int offset;");
+            } else if (line.contains("this.line++") || line.contains("this.pos++")) {
+                lines.add(i++, "                this.offset++;");
+            } else if (line.contains("int start_pos = this.pos")) {
+                lines.add(i++, "        int start_offset = this.offset;");
+            } else if (line.contains("int accept_pos = ")) {
+                lines.add(i++, "        int accept_offset = -1;");
+            } else if (line.contains("accept_pos = this.pos")) {
+                lines.add(i++, "            accept_offset = this.offset;");
+            } else if (line.contains("this.pos = accept_pos")) {
+                lines.add(i++, "            this.offset = accept_offset;");
+            } else if (line.contains("this.pos = token.getPos() - 1;")) {
+                lines.add(i++, "        this.offset = token.getOffset();");
+            } else if (line.contains("start_line + 1,")) {
+                lines.add(i++, "                    start_offset,");
+            } else if (line.contains("Token new")) {
+                line = line.replace("int line,", "int offset, @SuppressWarnings(\"hiding\") int line,");
+                line = line.replace("line, pos);", "offset, line, pos);");
+                lines.set(i, line);
             }
         }
         writeLines(file, lines);
 
-        out.addAll(Arrays.asList(
+        lines_iface.addAll(Arrays.asList(
                 "public interface LexerInterface {",
                 "    public Token peek() throws LexerException, IOException;",
                 "    public Token next() throws LexerException, IOException;",
                 "}"));
         File ifile = new File(file.getParentFile(), "LexerInterface.java");
-        writeLines(ifile, out);
+        writeLines(ifile, lines_iface);
     }
 
     private static void processParser(File file) throws IOException {
@@ -272,6 +299,38 @@ public class SableCCPostProcessor {
             out.set(i, out.get(i).replace("\t", "    "));
         File cfile = new File(file.getParentFile(), "NodeAccessor.java");
         writeLines(cfile, out);
+    }
+
+    private static void processToken(File file) throws IOException {
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        List<String> lines = readLines(file);
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i);
+            if (line.contains("private int line"))
+                lines.add(i++, "    private int offset;");
+            else if (line.contains("public int getLine"))
+                lines.add(i++, "    public int getOffset() { return offset; }\n    public void setOffset(int offset) { this.offset = offset; }\n");
+            // lines.set(i, line);
+        }
+        writeLines(file, lines);
+    }
+
+    private static void processTToken(File file, String prefix) throws IOException {
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        List<String> lines = readLines(file);
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i);
+            if (line.contains("int line, int pos)")) {
+                line = line.replace("int line, int pos", "int offset, int line, int pos");
+                lines.set(i, line);
+            } else if (line.contains("setLine(line)")) {
+                lines.add(i++, "        setOffset(offset);");
+            } else if (line.contains("return new " + prefix)) {
+                line = line.replace("getLine(), getPos()", "getOffset(), getLine(), getPos()");
+                lines.set(i, line);
+            }
+        }
+        writeLines(file, lines);
     }
 
     private static void processAnalysisAdapter(File file) throws IOException {
