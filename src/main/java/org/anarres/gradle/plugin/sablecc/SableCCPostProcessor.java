@@ -88,12 +88,16 @@ public class SableCCPostProcessor {
         List<String> lines_iface = new ArrayList<String>();
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i);
+
+            // Make Lexer implement an interface.
             if (line.startsWith("package ")) {
                 lines_iface.add(line);
             } else if (line.startsWith("import ")) {
                 lines_iface.add(line);
             } else if (line.startsWith("public class Lexer")) {
                 lines.set(i, "public class Lexer implements LexerInterface");
+
+                // Add offsets to Tokens, as well as line/column.
             } else if (line.contains("private int line")) {
                 lines.add(i++, "    private int offset;");
             } else if (line.contains("this.line++") || line.contains("this.pos++")) {
@@ -114,6 +118,16 @@ public class SableCCPostProcessor {
                 line = line.replace("int line,", "int offset, @SuppressWarnings(\"hiding\") int line,");
                 line = line.replace("line, pos);", "offset, line, pos);");
                 lines.set(i, line);
+
+                // Improve the performance of text handling.
+            } else if (line.contains("StringBuffer")) {
+                line = line.replace("StringBuffer", "StringBuilder");
+                lines.set(i, line);
+            } else if (line.contains("private String getText(")) {
+                line = "protected String getText(int acceptLength) { return text.substring(0, acceptLength); }";
+                lines.set(i, line);
+                for (int j = 0; j < 9; j++)
+                    lines.remove(i + 1);
             }
         }
         writeLines(file, lines);
