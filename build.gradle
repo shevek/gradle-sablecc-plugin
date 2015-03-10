@@ -30,5 +30,5 @@ dependencies {
 	compile 'org.anarres.gradle:gradle-velocity-plugin:1.0.0'
 	compile 'sablecc:sablecc:3.2-1'
 
-	testCompile 'junit:junit:4.8.1'
+	testCompile 'junit:junit:4.11'
 }
