@@ -2,19 +2,16 @@ package org.anarres.gradle.plugin.sablecc;
 
 import groovy.lang.Closure;
 import java.io.File;
-import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
 import org.anarres.gradle.plugin.velocity.VelocityTask;
-import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.gradle.api.Action;
-import org.gradle.api.GradleException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.file.ConfigurableFileTree;
 import org.gradle.api.file.CopySpec;
-import org.gradle.api.file.EmptyFileVisitor;
-import org.gradle.api.file.FileVisitDetails;
 import org.gradle.api.plugins.JavaPluginConvention;
 import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.SourceSet;
@@ -37,55 +34,55 @@ public class PureJavaSableCCPlugin implements Plugin<Project> {
 
             @Override
             public void execute(VelocityTask task) {
-                task.inputDir = project.file(extension.inputDir);
-                task.outputDir = project.file(extension.intermediateDir);
-                task.includeDir = project.file(extension.inputDir);
-                task.filter = "**/*.sablecc";
+
+                task.conventionMapping("inputDir", new Callable<File>() {
+                    @Override
+                    public File call() throws Exception {
+                        return project.file(extension.inputDir);
+                    }
+                });
+
+                task.conventionMapping("includeDirs", new Callable<List<File>>() {
+                    @Override
+                    public List<File> call() {
+                        List<Object> includeDirs = extension.includeDirs;
+                        if (includeDirs == null)
+                            return null;
+                        List<File> out = new ArrayList<File>();
+                        for (Object includeDir : includeDirs)
+                            out.add(project.file(includeDir));
+                        return out;
+                    }
+                });
+
+                task.conventionMapping("outputDir", new Callable<File>() {
+                    @Override
+                    public File call() throws Exception {
+                        return project.file(extension.intermediateDir);
+                    }
+                });
+
+                task.setFilter("**/*.sablecc");
             }
         });
 
-        final Task sableccParserTask = project.getTasks().create("sableccParser", new Action<Task>() {
+        final Task sableccParserTask = project.getTasks().create("sableccParser", SableCC.class, new Action<SableCC>() {
             @Override
-            public void execute(Task task) {
+            public void execute(SableCC task) {
                 task.dependsOn(sableccGrammarTask);
                 task.setDescription("Preprocesses SableCC grammar files.");
-                task.getInputs().dir(extension.intermediateDir);
-                task.getOutputs().dir(extension.outputDir);
-                task.doLast(new Action<Task>() {
 
+                task.conventionMapping("inputDir", new Callable<File>() {
                     @Override
-                    public void execute(Task task) {
-                        // println "Reading from $inputDir"
-                        final File outputDir = project.file(extension.outputDir);
-                        // println "Writing to $outputDir"
-                        DefaultGroovyMethods.deleteDir(outputDir);
-                        outputDir.mkdirs();
+                    public File call() throws Exception {
+                        return project.file(extension.intermediateDir);
+                    }
+                });
 
-                        ConfigurableFileTree inputFiles = project.fileTree(extension.intermediateDir);
-                        inputFiles.include("**/*.sablecc");
-                        inputFiles.visit(new EmptyFileVisitor() {
-                            @Override
-                            public void visitFile(FileVisitDetails fvd) {
-                                try {
-                                    org.sablecc.sablecc.SableCC.processGrammar(fvd.getFile().getAbsolutePath(), outputDir.getAbsolutePath());
-                                } catch (Exception e) {
-                                    throw new GradleException("Failed to process " + fvd, e);
-                                }
-                            }
-                        });
-
-                        ConfigurableFileTree outputFiles = project.fileTree(outputDir);
-                        outputFiles.visit(new EmptyFileVisitor() {
-                            @Override
-                            public void visitFile(FileVisitDetails fvd) {
-                                try {
-                                    SableCCPostProcessor.processFile(fvd.getFile());
-                                } catch (IOException e) {
-                                    throw new GradleException("Failed to post-process " + fvd, e);
-                                }
-                            }
-                        });
-
+                task.conventionMapping("outputDir", new Callable<File>() {
+                    @Override
+                    public File call() throws Exception {
+                        return project.file(extension.outputDir);
                     }
                 });
             }
