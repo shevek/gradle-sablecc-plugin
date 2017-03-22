@@ -25,7 +25,7 @@ public class PureJavaSableCCPlugin implements Plugin<Project> {
 
     @Override
     public void apply(final Project project) {
-        final SableCCPluginExtension extension = project.getExtensions().create("sablecc", SableCCPluginExtension.class);
+        final SableCCPluginExtension extension = project.getExtensions().create("sablecc", SableCCPluginExtension.class, project);
         final Configuration configuration = project.getConfigurations().create("sablecc");
 
         project.getDependencies().add(configuration.getName(), "sablecc:sablecc:3.2-1");

@@ -2,6 +2,7 @@ package org.anarres.gradle.plugin.sablecc;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.gradle.api.Project;
 
 /**
  *
@@ -14,4 +15,8 @@ public class SableCCPluginExtension {
     public Object intermediateDir = "build/generated-sources/grammar";
     public Object outputDir = "build/generated-sources/sablecc";
 
+    public SableCCPluginExtension(Project project) {
+        this.intermediateDir = project.getBuildDir() + "/generated-sources/grammar";
+        this.outputDir = project.getBuildDir() + "/generated-sources/sablecc";
+    }
 }
