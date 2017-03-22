@@ -1,23 +1,37 @@
 buildscript {
-    apply from: file('gradle/buildscript.gradle'), to: buildscript 
+	repositories {
+		mavenLocal()
+		mavenCentral()
+		jcenter()
+		// maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
+	}
+
+	dependencies {
+		classpath 'org.anarres.gradle:gradle-stdproject-plugin:1.0.8'
+	}
 }
 
-plugins {
-	// id 'nu.studer.plugindev' version '1.0.3'
+apply plugin: 'org.anarres.stdplugin'
+
+stdmodule {
+	description "A Gradle plugin for the SableCC parser generator."
+	author id: 'shevek', name: 'Shevek', email: 'github@anarres.org'
+	license 'Apache-2.0'
 }
 
-ext.githubProjectName = rootProject.name
+stdplugin {
+	implementation "org.anarres.sablecc", "org.anarres.gradle.plugin.sablecc.PureJavaSableCCPlugin"
+}
+
 group = "org.anarres.gradle"
-
-apply from: file('gradle/convention.gradle')
-apply from: file('gradle/github.gradle')
-apply from: file('gradle/nexus.gradle')
-apply from: file('gradle/check.gradle')
-apply from: file('gradle/license.gradle')
-apply from: file('gradle/plugin.gradle')
+sourceCompatibility = '1.7'
+targetCompatibility = '1.7'
 
 dependencies {
-	compile gradleApi()
 	compile 'org.anarres.gradle:gradle-velocity-plugin:1.0.4'
 	compile 'sablecc:sablecc:3.2-1'
+}
+
+animalsniffer {
+	skip = true
 }
