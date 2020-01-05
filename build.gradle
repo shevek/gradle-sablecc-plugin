@@ -1,13 +1,14 @@
 buildscript {
 	repositories {
-		mavenLocal()
+		// mavenLocal()
 		mavenCentral()
-		jcenter()
+		// jcenter()
 		// maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
+		gradlePluginPortal()
 	}
 
 	dependencies {
-		classpath 'org.anarres.gradle:gradle-stdproject-plugin:1.0.8'
+		classpath 'org.anarres.gradle:gradle-stdproject-plugin:1.0.10'
 	}
 }
 
@@ -30,8 +31,4 @@ targetCompatibility = '1.7'
 dependencies {
 	compile 'org.anarres.gradle:gradle-velocity-plugin:1.0.4'
 	compile 'sablecc:sablecc:3.2-1'
-}
-
-animalsniffer {
-	skip = true
 }
