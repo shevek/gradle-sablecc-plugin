@@ -39,7 +39,9 @@ public class SableCCPluginApplyTest {
                 A("2.14"),
                 A("3.0"),
                 A("3.2.1"),
-                A("3.4.1")
+                A("3.4.1"),
+                A("4.10.3"),
+                A("5.6")
         );
     }
 
